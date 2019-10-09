@@ -9,7 +9,7 @@ var ages = d3.csv("ageDistribution.csv")
 
 d3.csv("ageDistribution.csv", displayData);
 
-// create function to display data from csv file
+// create function to display data from csv
 function displayData(error, data) {
 	// create an array of unique years
 	var yearSet = [...new Set(data.map(function(d){ return d.year}))]
@@ -26,43 +26,10 @@ function displayData(error, data) {
 		})
 	})
 	
-	// draw bar graph for 2010
-	var rects = svg.selectAll("rect")
-		.data(fltrdData(data, 2010))
-		.enter().append("rect")
-		.attr("transform", "translate(0, 20)")
-		.attr("x", 100)
-		.attr("y", function(d, i) {
-			return padding + i * (barHeight + padding);
-		})
-		.attr("height", barHeight)
-		.style("fill", "orange");
-	
-	// time for rect growth 
-	var t = d3.transition()
-		.delay(200)
-		.duration(1000);	
-
-	// make the rects grow from the start
-	rects
-		.transition(t)
-		.attr("width", function(d, i) { 
-			return d.value * 4e3;
-		});
-
-	// add the text age descriptions to the left of the rectangles
-	var texts = svg.selectAll('text')
-		.data(fltrdData(data, 2010))
-		.enter().append("text")
-		.attr("transform", "translate(0, 20)")
-		.attr('x', 0)
-		.attr('y', function(d, i) {
-			return (i + 1) * (barHeight + padding);
-		})
-		.attr('font-size', fontSize)
-		.text(function(d) {
-			return d.age;
-		});
+	var graph = buildGraph(200, svg, data, padding, barHeight, 2010, 1);
+	// get the rects and the text so they can be updated farther below in the code
+	var rects = graph.r;
+	var texts = graph.t;
 
 	// create a scale for the x axis at the top of the graph to %14
 	var xScale = d3.scaleLinear()
@@ -100,12 +67,14 @@ function displayData(error, data) {
 	  	var selectedId = d3.select("#ord-select").property('value');
 
 	  	var year = d3.select(this).property('value');
+	  	
 	  	// check what order is selected then select and update
+	  	// if the order has been changed, reset to age descending then rebuild(update) the graph
 	  	if(['% descending', '% ascending', 'age descending'].includes(selectedId) == true){
-		  	selectAndUpdate(rects, texts, "#years", "ageOrder", data, "asc", padding, barHeight);
-		  	fltrDates(2000, svg, data, padding, barHeight, year);
+		  	selectAndUpdate(rects, texts, "#years", "ageOrder", data, "asc", padding, barHeight, 1);
+		  	buildGraph(2000, svg, data, padding, barHeight, year);
 	  	} else {
-	  		fltrDates(200, svg, data, padding, barHeight, year);
+	  		buildGraph(200, svg, data, padding, barHeight, year);
 	  	}
 	});
 
@@ -160,37 +129,68 @@ function fltrdData(data, yr) {
 	return fltrdData;
 }
 
-// declare the function for changing the year displayed, updating the graph with trnasitions
-function fltrDates(delay, svg, data, padding, barHeight, yr=2010){
-	var rs = svg.selectAll('rect')
-		.data(data.filter(function(d,i){
-			return d.year == yr; 
-		}))
-        
-	rs.enter().append("rect")
-		.attr("transform", "translate(0, 20)")
-		.attr("x", 100)
-		.attr("y", function(d, i) {
-			return padding + i * (barHeight + padding);
-		})
-		.attr("height", barHeight)
-		.style("fill", "orange")
-		.exit()
-        .remove();
+// build or update the graph, pass in flag for new or update
+function buildGraph(delay, svg, data, padding, barHeight, yr, isNew=0){
+	
+	if (isNew) { // BUILD RECTS NEW
+		var rects = svg.selectAll('rect')
+			.data(fltrdData(data, yr)) // FILTER THE DATA
+	    	.enter()
+	        .append("rect")
+			.attr("transform", "translate(0, 20)")
+			.attr("x", 100)
+			.attr("y", function(d, i) {
+				return padding + i * (barHeight + padding);
+			})
+			.attr("height", barHeight)
+			.style("fill", "orange");	
+	} else { // UPDATE THE RECTS DATA AND UPDATE RECTS OR REMOVE RECTS
+		var rects = svg.selectAll('rect')
+			.data(fltrdData(data, yr));
+	        
+	    rects
+	    	.enter()
+	        .append("rect")
+			.attr("transform", "translate(0, 20)")
+			.attr("x", 100)
+			.attr("y", function(d, i) {
+				return padding + i * (barHeight + padding);
+			})
+			.attr("height", barHeight)
+			.style("fill", "orange")	
+			.exit()
+	    	.remove();
+	}
 	
 	var s = d3.transition()
 		.delay(delay)
 		.duration(1000);
 
-	rs
+	rects
 		.transition(s)
 		.attr("width", function(d, i) { 
 			return d.value * 4e3;
 		});	
+
+	var texts = svg.selectAll('text')
+		.data(fltrdData(data, 2010))
+		.enter().append("text")
+		.attr("transform", "translate(0, 20)")
+		.attr('x', 0)
+		.attr('y', function(d, i) {
+			return (i + 1) * (barHeight + padding);
+		})
+		.attr('font-size', fontSize)
+		.text(function(d) {
+			return d.age;
+		});
+
+	// return rects and texts to be updated later
+	return {r: rects, t: texts}
 }
 
 // select and update the rects and texts for the order select(asc desc)
-function selectAndUpdate(rects, texts, id, selectBy, data, order, padding, barHeight) {
+function selectAndUpdate(rects, texts, id, selectBy, data, order, padding, barHeight, resetOrder=0) {
 	var yr = d3.select(id).property('value');
 
 	rects
@@ -228,4 +228,11 @@ function selectAndUpdate(rects, texts, id, selectBy, data, order, padding, barHe
 		.attr("y", function(d, i) {
 			return (i + 1) * (barHeight + padding);
 		});
+	
+	// reset the ord-select to display age ascending as selected if the user changes the year select
+	if(resetOrder){
+		$('#ord-select')
+	    .val('age ascending')
+	    .trigger('change');
+	}
 }
