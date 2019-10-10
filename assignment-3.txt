@@ -1,0 +1,54 @@
+Brendan O'Handley
+Assignment 3
+Data Visualization
+10/9/19
+
+This visualization was made to display the percentage of population
+by certain age ranges for certain years. The data was imported into
+the project from a csv file and the JavaScript framework d3.js
+was used to display the data as a bar graph. This graph initially displays the
+age distribution for age groups in the year 2010. The year can be changed
+and the graph updated. Another filter is provided to order the graph rectangles
+by age distribution, ascending and descending and percentage of population 
+ascending and descending. If the order is changed, and then another year is selected, 
+the order select returns to age ascending.
+
+After the data is imported from the csv, a callback function is fired
+to display the data. Within this function a number of other functions are 
+called to build the rectangles of the graph, add text for each rectangle, 
+build the x-axis,build the select dropdowns to filter and order the data, 
+add eventlisteners to the rectangles and select dropdowns, and add 
+transitions for when the graph iss updated.
+
+The main function of the displayData callback is buildGraph. This function
+takes parameters of delay time, the svg object, data, padding, barHeight,
+year(to filter data on), and a flag(isNew) to indicate if the graph is to be built new.
+If the isNew flag is passed in, the rect svg elements will be built new,
+otherwise, the data is filtered and the rects and texts are updated. A transition is 
+also added to make the updating appear smooth to the viewer. The rects and texts
+are then returned from this function so that after creation, eventlisteners can
+be added to them, and the objects can be passed to other functiions to be ordered
+or filtered, then updated again.
+
+The second main function is selectAndUpdate. This function accesses the select
+dropdrown for year and orders the displayed rectangles by age or percentage(asc and desc).
+This function accepts parameters of rects and texts svg elements to update, the id of 
+select tag to access data, order(asc or desc), padding, barHeight, and a flag to
+indicate resetting the select drupdown for order(when a new year is selected). This reset
+is done using jQuery because I could not find a way to fire the event successfully
+in d3.js.
+
+A third important function is fltrdData. This function takes data and yr as parameters
+and returns the filtered data. This function is re-used in every build and update of
+svg objects to display the selected year.
+
+Eventlisteners were added to the rectangles and the select dropdowns. The rectangles change
+color on the hover event. Each select dropdown fires a callback which accesses the value selected,
+and fires either selectAndUpdate, buildGraph or both functions. If a user only changes
+the year filter, only the graph will update with a delay of 200ms. If the user first 
+orders the graph, then selects a different year, the order reverts to age ascending and
+then the graph is updated. This requires a longer delay of 2000ms.
+
+This graph was a lot of fun to build and I look forward to exploring more ways to build
+data visualizations with d3.js.
+
